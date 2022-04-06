@@ -33,6 +33,16 @@ Test Cases Handled:
 
 TradeOffs :
 
-1. No preference for left or right aligned groups in a row when size of groups is same.
-2. while assigning middle seats to the row for an odd number seating arrangement is more left aligned.
-3. during scattered allocation max group fills first instead without any preference for back row or middle seat. 
+1. seats assigned to the maximum group available in a row
+2. In scattered allocation if 2 rows have same size slots the back row fills up first.
+3. No preference for left or right aligned groups in a row when size of groups is same.
+4. while assigning middle seats to the row for an odd number seating arrangement is more left aligned.
+5. during scattered allocation max group fills first instead without any preference for back row or middle seat.
+   
+Possible Improvements :
+
+1. Reuse code for continuous allocation in last step of scattered allocation.
+2. better algorithm -> if slot available with same number as tickets allocate in that slot instead of always assigning to larger slot.
+
+
+

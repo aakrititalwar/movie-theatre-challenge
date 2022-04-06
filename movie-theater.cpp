@@ -14,8 +14,8 @@ int total_cols = 20;
 
 map<string,vector<tuple<char,int,int>>> seat_alloc; // seat_alloc [map]  ==>   reserve_id ->  (row_name, starting seat, tickets alloted)
 
-map<int,deque<pair<int,int>>> curr_free;      // stores free groups of each row in desc order of size
-                                              // curr_free [map] ==>  row_num  ->  [(group_size, align), (group_size, align)]
+map<int,deque<pair<int,int>>> curr_free_slots;      // stores free groups of each row in desc order of size
+                                              // curr_free_slots [map] ==>  row_num  ->  [(group_size, align), (group_size, align)]
 int curr_avail_seats = total_cols * total_rows;
 
 static char linebuf[1024]; 
@@ -42,7 +42,7 @@ void free_group_init(){                       // when all rows are empty
     for(int i = 0; i < total_rows; i++){
         deque<pair<int,int>> q;
         q.push_back(make_pair(total_cols,0));
-        curr_free[i] = q;
+        curr_free_slots[i] = q;
     }
 }
 
@@ -66,21 +66,21 @@ char get_alpha(int rownum){               // get alphabet of row from rownum   J
          max_groups.pop();
      }
      for(int i = 0 ; i < total_rows; i++){                     // add all groups to priority queue in the form (group_size, row_num)
-         for(int j = 0 ; j < curr_free[i].size(); j++){
-             pair<int,int> p2 = make_pair(curr_free[i][j].first,i);
+         for(int j = 0 ; j < curr_free_slots[i].size(); j++){
+             pair<int,int> p2 = make_pair(curr_free_slots[i][j].first,i);
              max_groups.push(p2);
          }     
      }
  }
 void push_to_deq( int row, pair<int,int> p){
-    if(curr_free[row].empty()){
-        curr_free[row].push_back(p);
+    if(curr_free_slots[row].empty()){
+        curr_free_slots[row].push_back(p);
     }
-    else if(curr_free[row][0].first<=p.first){  // pair with max size goes first.
-        curr_free[row].push_front(p);
+    else if(curr_free_slots[row][0].first<=p.first){  // pair with max size goes first.
+        curr_free_slots[row].push_front(p);
     }
     else {
-        curr_free[row].push_back(p);
+        curr_free_slots[row].push_back(p);
     }
     return;
 }
@@ -96,13 +96,13 @@ void scattered_alloc(string reserve_id, int num_ticket){      // scattered Alloc
     tuple<char,int,int> tup;
         if(max_hole_size<= num_ticket){     // if number of tickets is more than the max available group size
 
-                if(curr_free[max_row][0].second == 1){                                                                            // if hole is right aligned
+                if(curr_free_slots[max_row][0].second == 1){                                                                            // if hole is right aligned
                     tup = make_tuple(get_alpha(max_row),total_cols-max_hole_size+1,max_hole_size);
                 }
                 else{                                                                                                      // if either row is empty or hole is left aligned
                     tup = make_tuple(get_alpha(max_row),1,max_hole_size);
                 }
-                curr_free[max_row].pop_front();
+                curr_free_slots[max_row].pop_front();
                 if(seat_alloc[reserve_id].empty()){                           // allocating all seats in the group
                     vector<tuple<char,int,int>> v;
                     seat_alloc[reserve_id] = v;
@@ -113,13 +113,13 @@ void scattered_alloc(string reserve_id, int num_ticket){      // scattered Alloc
         }
         else{    
                                                    // when available hole size is more than tickets
-                if(curr_free[max_row][0].second == -1){     // if left aligned hole
-                curr_free[max_row].pop_front();
+                if(curr_free_slots[max_row][0].second == -1){     // if left aligned hole
+                curr_free_slots[max_row].pop_front();
                 tup = make_tuple(get_alpha(max_row),total_cols-max_hole_size+1,num_ticket);
                 push_to_deq(max_row,make_pair((max_hole_size - num_ticket),-1));
                 }
-                else if(curr_free[max_row][0].second == 0){   // if row is empty
-                curr_free[max_row].pop_front();
+                else if(curr_free_slots[max_row][0].second == 0){   // if row is empty
+                curr_free_slots[max_row].pop_front();
                 int rem_seats = total_cols - num_ticket;
                 int st_seat = (int)(rem_seats/2) + 1;
                 if(st_seat-1 != 0) {
@@ -131,7 +131,7 @@ void scattered_alloc(string reserve_id, int num_ticket){      // scattered Alloc
                 tup = make_tuple(get_alpha(max_row),st_seat,num_ticket);
                 }
                 else{                                  // if hole is right aligned
-                    curr_free[max_row].pop_front();
+                    curr_free_slots[max_row].pop_front();
                     tup = make_tuple(get_alpha(max_row),max_hole_size+1,num_ticket);
                     push_to_deq(max_row,make_pair((max_hole_size - num_ticket),1));
                 }
@@ -153,14 +153,14 @@ void cont_allocation(string reserve_id, int num_ticket){
  bool allocated = false;
 
  for(int i = 0 ; i < total_rows; i++){
-     if(curr_free[i].empty()){            //if row completely filled move on to next
+     if(curr_free_slots[i].empty()){            //if row completely filled move on to next
          continue;
      }
-     pair<int,int> row_max_avail = curr_free[i][0];  // hole with max size
+     pair<int,int> row_max_avail = curr_free_slots[i][0];  // hole with max size
       
      if(row_max_avail.first>=num_ticket){       
          int st_seat;
-         curr_free[i].pop_front();
+         curr_free_slots[i].pop_front();
 
          if(row_max_avail.second == 0){     // if row is completely empty 
              int rem_seats = total_cols - num_ticket;
@@ -198,7 +198,7 @@ void cont_allocation(string reserve_id, int num_ticket){
      }
  }
  if(!allocated){                               // if still not allocated 
-    if(curr_avail_seats>=num_ticket){          // and number of seats available
+    if(curr_avail_seats>=num_ticket){          // and number of seats available exceed the number of tickets
        initialise_max_groups();   
        scattered_alloc(reserve_id,num_ticket);            // calling for scattered allocation
     }
